@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+import ipaddress
+import argparse
+
+def check_prefix(ip):
+    """Check ip address format.
+
+    Checks given ip address has CIDR notation or not. Add "/32" prefix 
+    if it is a single IP address.
+
+    Args:
+        ip: IP Address.
+    
+    Returns:
+        IP Address range in CIDR notation.
+    """
+    
+    if "/" not in ip:
+        ip = ''.join([ip, "/32"])
+        return(ip)
+    return(ip) 
+
+
+def get_network_and_broadcast_addresses(cidr_ip):
+    """Calculate network and broadcast addresses of given IP address range.
+
+    Args:
+        cidr_ip: IP address range.
+    
+    Returns:
+        A tuple of network address and broadcast address of given IP range.
+    """
+
+    net4 = ipaddress.ip_network(cidr_ip)
+    network_edges = (net4.network_address, net4.broadcast_address)
+    return(network_edges)
+
+
+def filter_ip(network_addr, broadcast_addr, logfile):
+    """Filter logs by given IP address range.
+
+    Args:
+        network_addr    : Network address of network.
+        broadcast_add   : Broadcast address of network.
+        logfile         : HTTP access log file.
+    """
+
+    with open(logfile, "r") as f:
+        for line in f:
+            ip_addr = line.split()[0]
+            if ipaddress.IPv4Address(ip_addr) >= ipaddress.IPv4Address(network_addr) and ipaddress.IPv4Address(ip_addr) <= ipaddress.IPv4Address(broadcast_addr):
+                print_log(line.strip())
+
+
+def print_log(log):
+    """Print the log line."""
+
+    print(log)
+
+
+def main():
+    """Return all log lines that correspond to a given source IP address or CIDR network."""
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ip')
+    parser.add_argument('--file')
+    args = parser.parse_args()
+    ip = args.ip
+
+    if args.file:
+        logfile = args.file
+    else:
+        logfile = "public_access.log.txt"
+
+    ip = check_prefix(ip)
+    network_address, broadcast_address = get_network_and_broadcast_addresses(ip)
+    filter_ip(network_address, broadcast_address, logfile)
+
+
+if __name__ == '__main__':
+    main()
